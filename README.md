@@ -55,17 +55,10 @@ $config = [
 
 ### 进程池使用示例
 ```php
-use rayswoole\redis\facade;
-// table方法必须指定完整的数据表名
-Db::table('think_user')->where('id', 1)->find();
-// 如果设置了数据表前缀（prefix）参数的话 也可以使用
-Db::name('user')->where('id', 1)->find();
-
-
 use \rayswoole\redis\facade\Redis;
-Redis::getInstance()->set('key', 'value');
+Redis::getInstance()->set('key', 'value');//带编辑器提示
 //或者
-Redis::set('key', 'value');
+Redis::set('key', 'value');//不带提示
 
 ```
 
