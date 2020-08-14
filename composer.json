@@ -1,0 +1,25 @@
+{
+    "name": "rayswoole/redis-pool",
+    "description": "基于swoole + phpredis扩展的redis连接池",
+    "keywords": [
+        "rayswoole",
+        "redis"
+    ],      
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "haoguangyun",
+            "email": "admin@haoguangyun.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.1.0",
+        "ext-swoole": ">=4.4.4",
+    },
+    "autoload": {
+        "psr-4": {
+            "rayswoole\\redis\\": "src"
+        },
+        "files": []
+    }
+}
