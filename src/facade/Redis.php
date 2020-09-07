@@ -52,21 +52,93 @@ class Redis
      */
     static function getInstance()
     {
-        if (Coroutine::getCid() > 0) {
-            if (!isset(Coroutine::getContext()['Redis_Instance'])) {
-                Coroutine::getContext()['Redis_Instance'] = self::$init->defer();
-            }
-            return Coroutine::getContext()['Redis_Instance'];
-        } else {
-            if (!isset(self::$instance)) {
-                self::$instance = self::$init->defer();
-            }
-            return self::$instance;
+        if (!isset(static::$instance)){
+            static::$instance = new static();
         }
+        return static::$instance;
+    }
+
+    public function getMultiple(array $keys)
+    {
+        $ret = self::$init->defer()->multi();
+        foreach ($keys as $key){
+            $ret->get($key);
+        }
+        return $ret->exec();
+    }
+
+    public function setMultiple(array $values, $ttl = 0)
+    {
+        $ret = self::$init->defer()->multi();
+        foreach ($values as $key=>$value){
+            $ret->set($key, $value, $ttl ?: null);
+        }
+        $ret->exec();
+    }
+
+    public function deleteMultiple($keys)
+    {
+        if (!is_array($keys)){
+            return false;
+        }
+        return self::$init->defer()->unlink($keys);
+    }
+
+    public function has($key)
+    {
+        return !empty(self::$init->defer()->exists($key));
+    }
+
+    public function set($key, $value, $ttl = null)
+    {
+        $time = time();
+        if ($ttl > $time){
+            $ttl = $ttl - $time;
+        }
+        return self::$init->defer()->set($key, $value, $ttl);
+    }
+
+    public function inc($key, $offset = 1)
+    {
+        return self::$init->defer()->incrBy($key, $offset);
+    }
+
+    public function dec($key, $offset = 1)
+    {
+        return self::$init->defer()->decrBy($key, $offset);
+    }
+
+    public function delete($key)
+    {
+        return self::$init->defer()->del($key);
+    }
+
+    public function clear()
+    {
+        return self::$init->defer()->flushDB();
+    }
+
+    public function isnull($value)
+    {
+        return $value === false;
+    }
+
+    public function __call($method, $params)
+    {
+        if (isset(self::$init)){
+            return call_user_func_array([self::$init->defer(), $method], $params);
+        } else {
+            throw new \Exception('Redis instance is not configured');
+        }
+
     }
 
     public static function __callStatic($method, $params)
     {
-        return call_user_func_array([static::getInstance(), $method], $params);
+        if (isset(self::$init)){
+            return call_user_func_array([self::$init->defer(), $method], $params);
+        } else {
+            throw new \Exception('Redis instance is not configured');
+        }
     }
 }

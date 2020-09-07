@@ -20,7 +20,7 @@ class RedisClient
      * @return \Redis|\RedisCluster
      * @throws \Exception
      */
-    static function get($conf)
+    static function get($conf, $timeout = 1.5)
     {
         if (count($conf['server']) == 1){
             $server = $conf['server'][0];
@@ -49,27 +49,29 @@ class RedisClient
                 }
             }
             $redis->select(is_int($conf['dbIndex']) && $conf['dbIndex']<10 ? $conf['dbIndex'] : 0);
-            $redis->setOption(\Redis::OPT_PREFIX, $conf['prefix']);
             if (is_array($conf['options'])){
                 foreach ($conf['options'] as $option=>$value){
                     $redis->setOption($option, $value);
                 }
             }
+            $redis->setOption(\Redis::OPT_PREFIX, $conf['prefix']);
+            $redis->setOption(\Redis::OPT_SCAN, \Redis::SCAN_RETRY);
             return $redis;
         } else {
-            $redis = new \RedisCluster(NULL, $conf['server'],$this->conf->getTimeout(),$this->conf->getTimeout(), true);
+            $redis = new \RedisCluster(NULL, $conf['server'],$timeout, $timeout, true);
+            $redis->select(is_int($conf['database']) && $conf['database']<10 ? $conf['database'] : 0);
+            if (is_array($conf['options'])){
+                foreach ($conf['options'] as $option=>$value){
+                    $redis->setOption($option, $value);
+                }
+            }
+            $redis->setOption(Redis::OPT_PREFIX, $conf['prefix']);
+            $redis->setOption(\Redis::OPT_SCAN, \Redis::SCAN_RETRY);
             $redis->setOption(\RedisCluster::OPT_SLAVE_FAILOVER, \RedisCluster::FAILOVER_ERROR);
             if (empty($conf['writeOnly'])){
                 $redis->setOption(\RedisCluster::OPT_SLAVE_FAILOVER, \RedisCluster::FAILOVER_DISTRIBUTE);
             } else {
                 $redis->setOption(\RedisCluster::OPT_SLAVE_FAILOVER, \RedisCluster::FAILOVER_DISTRIBUTE_SLAVES);
-            }
-            $redis->select(is_int($conf['database']) && $conf['database']<10 ? $conf['database'] : 0);
-            $redis->setOption(Redis::OPT_PREFIX, $conf['prefix']);
-            if (is_array($conf['options'])){
-                foreach ($conf['options'] as $option=>$value){
-                    $redis->setOption($option, $value);
-                }
             }
             return $redis;
         }

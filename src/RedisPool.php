@@ -46,7 +46,7 @@ class RedisPool
      */
     public function getObj()
     {
-        return RedisClient::get($this->conf->getExtraConf());
+        return RedisClient::get($this->conf->getExtraConf(), $this->conf->getTimeout());
     }
 
     /**
@@ -54,14 +54,14 @@ class RedisPool
      * @return bool
      * @throws \Throwable
      */
-    private function create(int $tryTimes = 10): bool
+    private function create(int $tryTimes = 10): ?object
     {
         if ($this->destroy) {
-            return false;
+            return null;
         }
         $this->init();
         if ($this->createdNum > $this->conf->getMax()) {
-            return false;
+            return null;
         }
         $this->createdNum++;
         $obj = $this->getObj();
@@ -69,17 +69,11 @@ class RedisPool
             static::$counter++;
             $hash = '_'.static::$counter.'_'.$this->createdNum;
             $obj->_hash = $hash;
-            $obj->_free = true;
             $obj->_lastTime = time();
-            if($this->poolChannel->push($obj)){
-                return true;
-            } else {
-                $obj = null;
-                unset($obj);
-            }
+            return $obj;
         }
         $this->createdNum--;
-        return false;
+        return null;
     }
 
     /**
@@ -88,23 +82,21 @@ class RedisPool
      * @return \Redis|null
      * @throws \Throwable
      */
-    private function pop(float $timeOut = -1, int $tryTimes = 3)
+    private function pop(float $timeOut = -1, int $tryTimes = 3): ?object
     {
         if ($this->destroy) {
             return null;
         }
         $this->init();
-        $obj = $this->poolChannel->pop($timeOut);
-        if (is_object($obj)) {
-            $obj->_free = false;
-            return $obj;
-        } else {
-            if ($tryTimes > 0 && $this->createdNum < $this->conf->getMax()) {
-                $this->create();
-                return $this->pop($timeOut, --$tryTimes);
-            }
+        if ($tryTimes <= 0) {
             return null;
         }
+        $obj = $this->poolChannel->pop($timeOut);
+        if (is_object($obj) || $obj = $this->create()) {
+            $obj->_free = false;
+            return $obj;
+        }
+        return $this->pop($timeOut, --$tryTimes);
     }
 
     /**
@@ -124,12 +116,6 @@ class RedisPool
         if (!isset($obj->_free) || $obj->_free === true){
             return true;
         }
-        //如果是当前协程创建的连接对象, 一并回收协程上下文
-        //无法通过外部执行当前方法, 该删除由defer操作
-        /*$cid = Coroutine::getCid();
-        if (isset($this->context[$cid]) && $this->context[$cid]->_hash == $obj->_hash) {
-            unset($this->context[$cid]);
-        }*/
         $obj->_lastTime = time();
         $obj->_free = true;
         if($this->poolChannel->push($obj)){
@@ -225,7 +211,10 @@ class RedisPool
         if ($length < $min && $this->createdNum < $this->conf->getMax()) {
             $left = $min - $length;
             while ($left > 0) {
-                $this->create();
+                if($obj = $this->create()){
+                    $obj->_free = true;
+                    $this->push($obj);
+                }
                 $left--;
             }
             return true;
@@ -266,7 +255,7 @@ class RedisPool
             });
             return $obj;
         } else {
-            throw new \Exception(static::class . " pool is empty");
+            return null;
         }
     }
 
@@ -341,10 +330,10 @@ class RedisPool
             $this->destroy = false;
             $this->context = [];
             $this->poolChannel = new Channel($this->conf->getMax() + 8);
-            $this->checkMin();
             if ($this->conf->getIntervalTime() > 0) {
                 $this->timerId = Timer::tick($this->conf->getIntervalTime(), [$this, 'intervalCheck']);
             }
+            $this->checkMin();
         }
     }
 }

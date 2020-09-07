@@ -20,7 +20,7 @@ class RedisConfig
     protected $max = 100;
     protected $min = 20;
     protected $free = 5;
-    protected $timeout = 3.0;
+    protected $timeout = 1.0;
     protected $pingTime = 30;
 
     protected $extraConf;
