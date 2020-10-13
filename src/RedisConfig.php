@@ -36,8 +36,8 @@ class RedisConfig
 
     /**
      * 设置定时器
-     * @param $IntervalTime
-     * @return Config
+     * @param int $intervalTime
+     * @return RedisConfig
      */
     public function withIntervalTime(int $intervalTime): RedisConfig
     {
@@ -57,7 +57,7 @@ class RedisConfig
     /**
      * 设置连接最大闲置时间
      * @param int $idleTime
-     * @return Config
+     * @return RedisConfig
      */
     public function withIdleTime(int $idleTime): RedisConfig
     {
@@ -118,7 +118,7 @@ class RedisConfig
 
     /**
      * 设置最少连接数量
-     * @param int $min
+     * @param int $free
      * @return RedisConfig
      * @throws \Exception
      */
@@ -138,7 +138,7 @@ class RedisConfig
 
     /**
      * @param float $timeout
-     * @return Config
+     * @return RedisConfig
      */
     public function withTimeout(float $timeout): RedisConfig
     {
@@ -158,7 +158,7 @@ class RedisConfig
     /**
      * 设置额外配置信息
      * @param $extraConf
-     * @return Config
+     * @return RedisConfig
      */
     public function withExtraConf($extraConf): RedisConfig
     {
@@ -177,8 +177,8 @@ class RedisConfig
 
     /**
      * 设置额外配置信息
-     * @param $extraConf
-     * @return Config
+     * @param int $time
+     * @return RedisConfig
      */
     public function withPing(int $time): RedisConfig
     {

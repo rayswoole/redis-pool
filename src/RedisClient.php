@@ -29,7 +29,7 @@ class RedisClient
             $port = $arr[1] ?? 6739;
 
             $redis = new \Redis();
-            if ($host{0} == '/'){//.sock模式
+            if ($host[0] == '/'){//.sock模式
                 $connect = $redis->connect($host);
             } else {
                 $connect = $redis->connect($host, $port);
