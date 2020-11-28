@@ -28,11 +28,6 @@ class RedisPool
     private $timerId;
     private $destroy = false;
     private $context = [];
-    /**
-     * 并发锁定, 防止高并发导致导致的抢占
-     * @var bool
-     */
-    private $createIng = false;
 
     public function __construct(RedisConfig $conf)
     {

@@ -54,7 +54,9 @@ class RedisClient
                     $redis->setOption($option, $value);
                 }
             }
-            $redis->setOption(\Redis::OPT_PREFIX, $conf['prefix']);
+            if (isset($conf['prefix'])){
+                $redis->setOption(\Redis::OPT_PREFIX, $conf['prefix']);
+            }
             $redis->setOption(\Redis::OPT_SCAN, \Redis::SCAN_RETRY);
             return $redis;
         } else {
