@@ -31,6 +31,10 @@ class Redis
      * @var \Redis
      */
     private static $instance;
+    /**
+     * @var int 序列化选项
+     */
+    private static $OPT_SERIALIZER = 0;
 
     /**
      * 初始化连接池
@@ -41,6 +45,9 @@ class Redis
     {
         if (!isset(self::$init) && is_object($config)){
             self::$init = new RedisPool($config);
+            if (!empty($config->getExtraConf()['options']) && !empty($config->getExtraConf()['options'][\Redis::OPT_SERIALIZER])) {
+                static::$OPT_SERIALIZER = $config->getExtraConf()['options'][\Redis::OPT_SERIALIZER];
+            }
         }
         return self::$init;
     }
@@ -89,13 +96,28 @@ class Redis
         return !empty(self::$init->defer()->exists($key));
     }
 
+    public function get($key)
+    {
+        $data = self::$init->defer()->get($key);
+        if (!empty($data) && static::$OPT_SERIALIZER === 0 && is_string($data) && $data[0] === 'a' && $data[1] === ':') {
+            $undata = unserialize($data);
+            return $undata === false ? $data : $undata;
+        }
+        return $data;
+
+    }
+
     public function set($key, $value, $ttl = null)
     {
         $time = time();
         if ($ttl > $time){
             $ttl = $ttl - $time;
         }
-        return self::$init->defer()->set($key, $value, $ttl);
+        if (static::$OPT_SERIALIZER === 0 && !is_string($value) && !is_numeric($value) && !is_bool($value)) {
+            return self::$init->defer()->set($key, serialize($value), $ttl);
+        } else {
+            return self::$init->defer()->set($key, $value, $ttl);
+        }
     }
 
     public function inc($key, $offset = 1)
